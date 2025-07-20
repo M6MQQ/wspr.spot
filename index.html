@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WSPR.spot</title>
+  <script src='https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js'></script>
+  <link href='https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css' rel='stylesheet' />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <link href='styles.css' rel='stylesheet' />
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script src="telemetry.js"></script>
+  <script src="map.js"></script>
+  <script src="app.js"></script>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <h2>WSPR.spot</h2>
+    </div>
+    
+    <div class="content">
+      <div class="form-section">
+        <div class="form-row">
+          <div class="form-group callsign-group">
+            <label for="callsign">Callsign</label>
+            <input type="text" id="callsign" value="">
+          </div>
+          <div class="form-group">
+            <label for="start">Start Date</label>
+            <input type="date" id="start">
+          </div>
+          <div class="form-group">
+            <label for="end">End Date <span class="tooltip-icon">?<span class="tooltip-text">End date will default to current time if left blank. Start date defaults to 00:00, end date defaults to 23:59.</span></span></label>
+            <input type="date" id="end" placeholder="Leave empty for current time">
+          </div>
+          <div class="form-group time-offset-group">
+            <label for="time-offset">Time Offset<span class="tooltip-icon">?<span class="tooltip-text">Filter spots by transmission pattern. For example, selecting ':04' will show spots at XX:04, XX:14, XX:24, etc.</span></span></label>
+            <select id="time-offset">
+              <option value="">All times</option>
+              <option value="0">:00, :10, :20...</option>
+              <option value="2">:02, :12, :22...</option>
+              <option value="4">:04, :14, :24...</option>
+              <option value="6">:06, :16, :26...</option>
+              <option value="8">:08, :18, :28...</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group" style="width: 100%; margin-bottom: 0;">
+            <label style="font-weight: 600; color: #495057; font-size: 1em; margin-bottom: 10px; display: block;">
+              Traquito
+            </label>
+            <div style="display: flex; gap: 15px; align-items: end;">
+              <div class="form-group" style="flex: 1;">
+                <label for="channel" style="font-size: 0.9em;">Channel</label>
+                <input type="number" id="channel" min="0" max="599" placeholder="0-599">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label for="band" style="font-size: 0.9em;">Band</label>
+                <select id="band">
+                  <option value="">Select band</option>
+                  <option value="160m">160m</option>
+                  <option value="80m">80m</option>
+                  <option value="60m">60m</option>
+                  <option value="40m">40m</option>
+                  <option value="30m">30m</option>
+                  <option value="20m">20m</option>
+                  <option value="17m">17m</option>
+                  <option value="15m">15m</option>
+                  <option value="12m">12m</option>
+                  <option value="10m">10m</option>
+                  <option value="6m">6m</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="button-group">
+          <button class="btn-primary" onclick="fetchData()">Fetch WSPR Data</button>
+          <button class="btn-secondary" id="copy-button" onclick="copyShareableUrl()">Copy Share URL</button>
+          <button id="animate-button" onclick="toggleAnimation()" style="display: none; background-color: #ff8c00; color: white; border: none; cursor: pointer; padding: 8px 16px;">Play Animation</button>
+          <select id="animation-speed" style="display: none; padding: 6px 8px; border: 2px solid #e9ecef; border-radius: 4px; font-size: 12px; background: white; color: #495057; cursor: pointer; margin-left: 5px; width: 70px;">
+            <option value="1">1x</option>
+            <option value="2">2x</option>
+            <option value="4">4x</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="map-section">
+        <div id="map"></div>
+      </div>
+      
+      <div class="flight-time-section" id="flight-time-section" style="display: none;">
+        <div class="flight-time-box">
+          <span class="flight-time-label">Flight Time:</span>
+          <span class="flight-time-value" id="flight-time-value">-</span>
+          <span class="offset-label" id="offset-label" style="margin-left: 20px; color: #6c757d;"></span>
+        </div>
+      </div>
+      
+      <div class="chart-section" id="chart-section" style="display: none;">
+        <div class="chart-container">
+
+          <div class="chart-row" style="display: flex; gap: 20px; justify-content: space-between;">
+            <div class="chart-box" style="flex: 1; max-width: 48%;">
+              <h3>Altitude Over Time</h3>
+              <div style="height: 300px; width: 100%;">
+                <canvas id="altitude-chart"></canvas>
+              </div>
+            </div>
+            <div class="chart-box" style="flex: 1; max-width: 48%;">
+              <h3>Speed Over Time</h3>
+              <div style="height: 300px; width: 100%;">
+                <canvas id="speed-chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="results-section">
+        <div id="results">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp (Local Time)</th>
+                <th>Grid</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="2" style="text-align: center; color: #6c757d; font-style: italic; padding: 20px;">
+                  Enter a callsign and date range, then click "Fetch WSPR Data" to see spots
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    M6MQQ. Open source code available on <a href="https://github.com/M6MQQ/wspr.spot" target="_blank">GitHub</a>. WSPR data from <a href="https://wspr.live" target="_blank">wspr.live</a>. Traquito telemetry from <a href="https://github.com/wsprtv/wsprtv.github.io" target="_blank">wsprtv</a>
+  </footer>
+
+
+
+</body>
+</html>

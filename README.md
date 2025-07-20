@@ -142,6 +142,12 @@ CSS styling for the application interface:
 #### `favicon.ico`
 Website favicon for browser tabs
 
+#### `backup/` Directory
+Contains archived versions and test files:
+- `test/`: Test files including map tiles and test data
+- `working/`: Working version backups
+- Various archive files
+
 ## API Integration
 
 The application integrates with the wspr.live API to fetch WSPR data:
